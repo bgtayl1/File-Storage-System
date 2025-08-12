@@ -1,0 +1,121 @@
+﻿<!-- SettingsView.xaml -->
+<!-- This view now includes a section for building the search index. -->
+<UserControl x:Class="FileFlow.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:FileFlow"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="800"
+             Background="{DynamicResource BackgroundBrush}">
+    <UserControl.Resources>
+        <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <ObjectDataProvider x:Key="ThemeEnumValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="local:ThemeManager+Theme"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="40,30">
+            <TextBlock Text="Settings" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,30"/>
+
+            <!-- Project Folder Path Section -->
+            <TextBlock Text="Project Folder Path" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,15"/>
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Current Path:" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding ProjectFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Padding="5" />
+                    <Button Content="Save and Reload Projects" Command="{Binding SaveAndReloadCommand}" Style="{DynamicResource ModernButton}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Appearance Section -->
+            <TextBlock Text="Appearance" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,30,0,15"/>
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Select a theme:" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding Source={StaticResource ThemeEnumValues}}" 
+                              SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Cache Management Section -->
+            <TextBlock Text="Cache Management" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,30,0,15"/>
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Pre-load all subfolder contents for faster navigation." TextWrapping="Wrap" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,10"/>
+                    <Button Content="Pre-cache All Subfolders" Command="{Binding PreCacheCommand}" HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCaching}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="Stop Caching" Command="{Binding StopCacheCommand}" HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Background" Value="IndianRed"/>
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCaching}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Grid Margin="0,10,0,0" Visibility="{Binding IsCaching, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ProgressBar Value="{Binding CacheProgress}" Height="20"/>
+                        <TextBlock Text="{Binding CacheProgress, StringFormat={}{0:0}%}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Search Index Management Section -->
+            <TextBlock Text="Search Index" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,30,0,15"/>
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Build a local index for instant search results. This may take a long time." TextWrapping="Wrap" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,10"/>
+                    <Button Content="Build Search Index" Command="{Binding BuildIndexCommand}" HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsIndexing}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="Stop Indexing" Command="{Binding StopIndexCommand}" HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Background" Value="IndianRed"/>
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsIndexing}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Grid Margin="0,10,0,0" Visibility="{Binding IsIndexing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ProgressBar Value="{Binding IndexProgress}" Height="20"/>
+                        <TextBlock Text="{Binding IndexProgress, StringFormat={}{0:0}%}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
