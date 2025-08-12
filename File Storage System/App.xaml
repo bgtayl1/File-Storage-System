@@ -1,0 +1,21 @@
+﻿<!-- App.xaml -->
+<!-- This file now loads the DarkTheme by default and includes the new converter. -->
+<Application x:Class="FileFlow.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FileFlow"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Load the Dark theme by default. The ThemeManager will swap this out at runtime. -->
+                <ResourceDictionary Source="DarkTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Converters -->
+            <local:BoolToIconConverter x:Key="BoolToIconConverter"/>
+            <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
