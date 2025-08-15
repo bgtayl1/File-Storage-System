@@ -22,7 +22,6 @@ namespace FileFlow
         private readonly string _rootPath;
         private CancellationTokenSource? _statsCts;
         private CancellationTokenSource? _navigateCts;
-        private List<FileItem> _currentItems = new();
 
         public event Action? RequestNavigateToDashboard;
 
@@ -140,7 +139,6 @@ namespace FileFlow
 
             CurrentPath = path;
             DisplayedItems.Clear();
-            _currentItems.Clear();
             StatusMessage = null;
             OnPropertyChanged(nameof(StatusMessage));
 
@@ -148,13 +146,19 @@ namespace FileFlow
             {
                 await Task.Run(() =>
                 {
+                    var items = new List<FileItem>();
                     try
                     {
                         foreach (var item in FastFileEnumerator.Enumerate(path))
                         {
                             if (cancellationToken.IsCancellationRequested) break;
                             App.Current.Dispatcher.Invoke(() => DisplayedItems.Add(item));
-                            _currentItems.Add(item);
+                            items.Add(item);
+                        }
+
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            CacheManager.AddFolderContents(path, items);
                         }
                     }
                     catch (Exception)
@@ -175,9 +179,10 @@ namespace FileFlow
         {
             await Task.Run(() =>
             {
+                var sourceItems = CacheManager.GetFolderContents(CurrentPath ?? "") ?? new List<FileItem>();
                 var filtered = string.IsNullOrWhiteSpace(SearchText)
-                    ? _currentItems
-                    : _currentItems.Where(item => item.FileName != null && item.FileName.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                    ? sourceItems
+                    : sourceItems.Where(item => item.FileName != null && item.FileName.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
 
                 App.Current.Dispatcher.Invoke(() =>
                 {
@@ -220,6 +225,18 @@ namespace FileFlow
             _statsCts = new CancellationTokenSource();
             var cancellationToken = _statsCts.Token;
 
+            var cachedStats = CacheManager.GetFolderStats(path);
+            if (cachedStats.HasValue)
+            {
+                TotalFolders = cachedStats.Value.Item1;
+                TotalFiles = cachedStats.Value.Item2;
+                StorageUsedGB = cachedStats.Value.Item3;
+                OnPropertyChanged(nameof(TotalFolders));
+                OnPropertyChanged(nameof(TotalFiles));
+                OnPropertyChanged(nameof(StorageUsedGB));
+                return;
+            }
+
             TotalFolders = 0;
             TotalFiles = 0;
             StorageUsedGB = 0;
@@ -241,6 +258,11 @@ namespace FileFlow
                         TotalFiles = files.Length;
                         long totalBytes = files.Sum(f => { try { return new FileInfo(f).Length; } catch (FileNotFoundException) { return 0; } });
                         StorageUsedGB = Math.Round(totalBytes / (1024.0 * 1024.0 * 1024.0), 3);
+
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            CacheManager.AddFolderStats(path, (TotalFolders, TotalFiles, StorageUsedGB));
+                        }
                     }
                     catch (UnauthorizedAccessException) { /* Reset stats */ }
 
@@ -260,8 +282,6 @@ namespace FileFlow
         }
     }
 }
-
-
 
 
 
