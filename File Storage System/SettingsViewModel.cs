@@ -1,14 +1,15 @@
 ﻿// SettingsViewModel.cs
-// This class now includes logic for managing content indexed paths.
-
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace FileFlow
 {
@@ -16,11 +17,10 @@ namespace FileFlow
     {
         private readonly ApplicationState _appState;
         private CancellationTokenSource? _indexCts;
+        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly DispatcherTimer _timer;
 
-        // This property will now only display the current path
         public string ProjectFolderPath => _appState.ProjectFolderPath;
-
-        // This new property will be bound to the textbox for editing
         public string EditableProjectFolderPath { get; set; }
 
         private ThemeManager.Theme _selectedTheme;
@@ -42,27 +42,25 @@ namespace FileFlow
         public bool IsIndexing
         {
             get => _isIndexing;
-            set
-            {
-                _isIndexing = value;
-                OnPropertyChanged(nameof(IsIndexing));
-            }
+            set { _isIndexing = value; OnPropertyChanged(nameof(IsIndexing)); }
         }
 
         private double _indexProgress;
         public double IndexProgress
         {
             get => _indexProgress;
-            set
-            {
-                _indexProgress = value;
-                OnPropertyChanged(nameof(IndexProgress));
-            }
+            set { _indexProgress = value; OnPropertyChanged(nameof(IndexProgress)); }
+        }
+
+        private string _apiStatusMessage;
+        public string ApiStatusMessage
+        {
+            get => _apiStatusMessage;
+            set { _apiStatusMessage = value; OnPropertyChanged(nameof(ApiStatusMessage)); }
         }
 
         public ObservableCollection<string> IndexedPaths { get; } = new ObservableCollection<string>();
         public string? NewPath { get; set; }
-
 
         public ICommand SaveAndReloadCommand { get; }
         public ICommand BuildIndexCommand { get; }
@@ -70,37 +68,77 @@ namespace FileFlow
         public ICommand AddPathCommand { get; }
         public ICommand RemovePathCommand { get; }
 
+        // In SettingsViewModel.cs
+
         public SettingsViewModel(ApplicationState appState)
         {
             _appState = appState;
-            EditableProjectFolderPath = _appState.ProjectFolderPath; // Initialize with the current path
+            EditableProjectFolderPath = _appState.ProjectFolderPath;
 
-            SaveAndReloadCommand = new RelayCommand(async _ =>
+            // --- THIS BLOCK IS THE FIX ---
+            // This handler tells the HttpClient to ignore self-signed certificate errors.
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+            };
+            _httpClient = new HttpClient(handler);
+            _httpClient.BaseAddress = new Uri("https://LPMSRV:7076/api/");
+            // --- END OF FIX ---
+
+            _apiStatusMessage = "Connecting to service...";
+
+            SaveAndReloadCommand = new RelayCommand(_ =>
             {
                 if (_appState.ProjectFolderPath != EditableProjectFolderPath)
                 {
                     _appState.ProjectFolderPath = EditableProjectFolderPath;
-                    OnPropertyChanged(nameof(ProjectFolderPath)); // Notify UI of the change
+                    OnPropertyChanged(nameof(ProjectFolderPath));
                 }
             });
 
-            BuildIndexCommand = new RelayCommand(async _ => await BuildIndex(), _ => _appState.Projects.Any());
-            StopIndexCommand = new RelayCommand(_ => StopIndexing());
+            BuildIndexCommand = new RelayCommand(async _ => await BuildIndex(), _ => false);
+            StopIndexCommand = new RelayCommand(_ => StopIndexing(), _ => false);
             AddPathCommand = new RelayCommand(_ => AddPath());
             RemovePathCommand = new RelayCommand(path => RemovePath(path as string));
 
             _selectedTheme = ThemeManager.Theme.Dark;
 
-            // Load saved paths
             foreach (var path in _appState.IndexedPaths)
             {
                 IndexedPaths.Add(path);
             }
 
-            _appState.Projects.CollectionChanged += (s, e) =>
+            _timer = new DispatcherTimer
             {
-                ((RelayCommand)BuildIndexCommand).RaiseCanExecuteChanged();
+                Interval = TimeSpan.FromSeconds(5)
             };
+            _timer.Tick += async (s, e) => await CheckApiStatus();
+            _timer.Start();
+            _ = CheckApiStatus();
+        }
+
+        private async Task CheckApiStatus()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("status");
+                if (response.IsSuccessStatusCode)
+                {
+                    var status = await response.Content.ReadFromJsonAsync<IndexingStatusModel>();
+                    if (status != null)
+                    {
+                        ApiStatusMessage = status.StatusMessage;
+                    }
+                }
+                else
+                {
+                    ApiStatusMessage = "Could not connect to indexing service.";
+                }
+            }
+            catch (HttpRequestException)
+            {
+                ApiStatusMessage = "Service is offline.";
+            }
         }
 
         private void AddPath()
@@ -110,7 +148,6 @@ namespace FileFlow
                 IndexedPaths.Add(NewPath);
                 _appState.IndexedPaths = IndexedPaths.ToList();
                 AppSettings.SaveIndexedPaths(_appState.IndexedPaths);
-                OnPropertyChanged(nameof(NewPath)); // Clear the textbox
                 NewPath = string.Empty;
                 OnPropertyChanged(nameof(NewPath));
             }
@@ -126,35 +163,15 @@ namespace FileFlow
             }
         }
 
-        private async Task BuildIndex()
+        private Task BuildIndex()
         {
-            if (!_appState.Projects.Any())
-            {
-                MessageBox.Show("There are no projects loaded to build an index from. Please check the project folder path and reload.", "No Projects Found", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            IsIndexing = true;
-            IndexProgress = 0;
-            _indexCts = new CancellationTokenSource();
-            var progress = new Progress<double>(p => IndexProgress = p);
-
-            try
-            {
-                await SearchIndexManager.BuildIndexAsync(_appState.Projects, _appState.IndexedPaths, progress, _indexCts.Token);
-            }
-            catch (OperationCanceledException) { /* Expected */ }
-            finally
-            {
-                IsIndexing = false;
-                _indexCts?.Dispose();
-                _indexCts = null;
-            }
+            // This logic is now server-side. The button is disabled.
+            return Task.CompletedTask;
         }
 
         private void StopIndexing()
         {
-            _indexCts?.Cancel();
+            // This logic is now server-side. The button is disabled.
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -164,6 +181,3 @@ namespace FileFlow
         }
     }
 }
-
-
-

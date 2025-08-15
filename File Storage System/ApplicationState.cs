@@ -57,16 +57,8 @@ namespace FileFlow
             // Load the last used path on startup.
             _projectFolderPath = AppSettings.LoadLastPath();
             IndexedPaths = AppSettings.LoadIndexedPaths();
-            SearchIndexManager.LoadIndex();
-            this.ProjectsLoaded += OnProjectsLoadedForIndexing;
+            // All local index loading and building has been removed.
             _ = SyncAndLoadProjectsAsync();
-        }
-
-        private async void OnProjectsLoadedForIndexing(object? sender, EventArgs e)
-        {
-            // Wait for 10 seconds before starting the background index build
-            await Task.Delay(10000);
-            _ = SearchIndexManager.BuildIndexAsync(this.Projects, this.IndexedPaths, new Progress<double>(), CancellationToken.None);
         }
 
         public async Task SyncAndLoadProjectsAsync()
@@ -246,3 +238,7 @@ namespace FileFlow
         }
     }
 }
+
+
+
+

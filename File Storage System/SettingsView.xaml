@@ -25,10 +25,8 @@
                 <StackPanel>
                     <TextBlock Text="Current Path:" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
                     <TextBlock Text="{Binding ProjectFolderPath, Mode=OneWay}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,10"/>
-
                     <TextBlock Text="New Path:" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
                     <TextBox Text="{Binding EditableProjectFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Padding="5" />
-
                     <Button Content="Save and Reload Projects" Command="{Binding SaveAndReloadCommand}" Style="{DynamicResource ModernButton}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
@@ -65,36 +63,13 @@
             <TextBlock Text="Search Index" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,30,0,15"/>
             <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20">
                 <StackPanel>
-                    <TextBlock Text="Build a local index for instant search results. This may take a long time." TextWrapping="Wrap" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,10"/>
-                    <Button Content="Build Search Index" Command="{Binding BuildIndexCommand}" HorizontalAlignment="Left">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsIndexing}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button Content="Stop Indexing" Command="{Binding StopIndexCommand}" HorizontalAlignment="Left">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
-                                <Setter Property="Background" Value="IndianRed"/>
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsIndexing}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Grid Margin="0,10,0,0" Visibility="{Binding IsIndexing, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ProgressBar Value="{Binding IndexProgress}" Height="20"/>
-                        <TextBlock Text="{Binding IndexProgress, StringFormat={}{0:0}%}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
-                    </Grid>
+                    <TextBlock Text="Service Status:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding ApiStatusMessage}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,20"/>
+
+                    <TextBlock Text="The search index is now managed by the server-side service. Manual controls are disabled." TextWrapping="Wrap" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,10"/>
+
+                    <Button Content="Build Search Index" IsEnabled="False" Style="{DynamicResource ModernButton}" HorizontalAlignment="Left"/>
+
                 </StackPanel>
             </Border>
         </StackPanel>
